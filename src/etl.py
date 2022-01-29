@@ -3,9 +3,10 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 from shapely.geometry import Point, Polygon
+from datetime import datetime, timedelta
 from functools import reduce
 from operator import iconcat, itemgetter
-from funcs import convertDate
+# from funcs import convertDate
 
 
 def boundsBuffer(x, buffer=0.075):
@@ -23,13 +24,27 @@ def boundsBuffer(x, buffer=0.075):
     return Polygon(coords)
 
 
+def convertDate(date):
+    """
+    Converts EE.Date or unix date to Y-M-D formst
+    """
+    if isinstance(date, ee.Date):
+        date = date.getInfo()["value"]
+
+    return datetime.utcfromtimestamp(date/1000).strftime("%Y-%m-%d")# %H:%M:%S')
+
+
 def sizeCode(x):
-    if (10000 <= x < 50000):
+    if x < 5000:
+        return "A"
+    elif 5000 <= x < 10000:
+        return "G"
+    elif 10000 <= x < 50000:
         return "H"
-    elif (50000 <= x < 100000):
+    elif 50000 <= x < 100000:
         return "I"
-    elif (100000 <= x < 500000):
-        return "J"
+    elif 100000 <= x:
+        return "J+"
 
 
 
@@ -94,7 +109,6 @@ def formatToGPD(fireNames, pointLst):
     gdf.to_crs("EPSG:3310", inplace=True)
     return gdf
     # gdf.to_file(path)
-
 
 
 def mosaicByDate(collection):
