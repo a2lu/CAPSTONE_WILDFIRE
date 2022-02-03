@@ -9,6 +9,9 @@ from PIL import Image, ImageOps
 
 
 def add_ee_layer(self, ee_image_object, vis_params, name, show=True, opacity=1, min_zoom=0):
+    """
+    Maps EE objects in Folium
+    """
     map_id_dict = ee.Image(ee_image_object).getMapId(vis_params)
     folium.raster_layers.TileLayer(
         tiles=map_id_dict['tile_fetcher'].url_format,
@@ -31,9 +34,9 @@ def downloadEEGif(collection, gifParams, filePath, textSequence, textPosition, i
     Args:
         collection: ee.ImageCollection with images to convert into gif
         gifParams:
-        textSequence: Array with text to apply to each image
-        textPosition: Tuple with
-        imageDuration:
+        textSequence: array with text to apply to each image
+        textPosition: tuple with text position
+        imageDuration: length of each image frame in milliseconds
     """
     gifURL = collection.getVideoThumbURL(gifParams)
 
@@ -46,7 +49,7 @@ def downloadEEGif(collection, gifParams, filePath, textSequence, textPosition, i
 
 def saveImage(image, params, options, path, fileName):
     """
-    Saves ee.Image as png
+    Saves ee.Image locally as png
     """
     dim, region = options
     params["dimensions"] = dim
@@ -62,7 +65,12 @@ def saveImage(image, params, options, path, fileName):
 
 def stdImageSize(in_path, stdSize, out_path):
     """
-    Standarizes image sizes with buffers
+    Standardizes image sizes with buffers
+
+    Args:
+        in_path: path with images to standardize
+        stdSize: size in pixels to standardize images
+        out_path: path to store standardized images
     """
     if not os.path.exists(out_path):
         os.makedirs(out_path)
