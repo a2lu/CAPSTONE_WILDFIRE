@@ -27,7 +27,6 @@ from sklearn.neighbors import KNeighborsClassifier
 
 sys.path.insert(0, 'src')
 from src.data import *
-from src.model import *
 
 def main(targets):
     """
@@ -39,7 +38,7 @@ def main(targets):
     # Clean the dataframe
     clean_df = data.clean_data(df)
 
-    # grab the specific column "HW::CORE:C0:PERCENT" as a feature
+    # Standardize each feature
     X_scaled = data.standardize(clean_df)
 
 if __name__ == "__main__":
