@@ -41,7 +41,7 @@ class baselines():
         Returns: fitted model
         """
         lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
+        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values.ravel())
         x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
         pipe = LogisticRegression()
         pipe.fit(x_train, y_train)
@@ -55,7 +55,7 @@ class baselines():
         Returns: fitted model
         """
         lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
+        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values.ravel())
         x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
         clf = MLPClassifier(max_iter=300).fit(x_train, y_train)
         print("MLP Classifier: "+str(clf.score(x_test, y_test)))
@@ -69,7 +69,7 @@ class baselines():
         Returns: fitted model and confusion matrix
         """
         lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
+        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values.ravel())
         x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
         clf = ExtraTreesClassifier().fit(x_train, y_train)
         print("Extra Trees Classifier: "+str(clf.score(x_test, y_test)))
@@ -83,11 +83,11 @@ class baselines():
         Returns: fitted model
         """
         lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
+        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values.ravel())
         x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
         clf = KNeighborsClassifier()
         clf.fit(x_train, y_train)
-        print("Extra Trees Classifier: "+str(clf.score(x_test, y_test)))
+        print("KNeighbors Classifier: "+str(clf.score(x_test, y_test)))
         return clf
 
     def rf_class(clean_df, X_scaled):
@@ -97,7 +97,7 @@ class baselines():
         Returns: fitted model
         """
         lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
+        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values.ravel())
         x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
         clf = RandomForestClassifier()
         clf.fit(x_train, y_train)

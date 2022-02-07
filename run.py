@@ -3,7 +3,6 @@ import json
 import os
 
 import geopandas as gpd
-import pandas as pd
 from datetime import datetime, timedelta
 import time
 import numpy as np
@@ -25,6 +24,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 sys.path.insert(0, 'src')
 from src.data import *
+from src.baselines import *
 
 def main(targets):
     """
@@ -40,16 +40,16 @@ def main(targets):
     X_scaled = data.standardize(clean_df)
 
     # MLP Classifier model
-    mlp_model = data.mlp_class(clean_df, X_scaled)
-
-    # Extra Trees Classifier model and confusion matrix
-    xtra_model, best_confusion = data.xrta_class(clean_df, X_scaled)
+    mlp_model = baselines.mlp_class(clean_df, X_scaled)
 
     # KNeighbors Classifier model
-    kn_model = data.kn_class(clean_df, X_scaled)
+    kn_model = baselines.kn_class(clean_df, X_scaled)
 
     # Random Forest Classifier model
-    rf_model = data.rf_class(clean_df, X_scaled)
+    rf_model = baselines.rf_class(clean_df, X_scaled)
+
+    # Extra Trees Classifier model and confusion matrix
+    xtra_model, best_confusion = baselines.xtra_class(clean_df, X_scaled)
 
     print(best_confusion)
 
