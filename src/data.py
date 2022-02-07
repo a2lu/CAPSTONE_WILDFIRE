@@ -5,11 +5,8 @@ data.py
 import sys
 import json
 import os
-from matplotlib.pyplot import figure
-import matplotlib.pyplot as plt
 
 import geopandas as gpd
-import pandas as pd
 from datetime import datetime, timedelta
 import time
 import numpy as np
@@ -29,6 +26,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.neighbors import KNeighborsClassifier
 
+
 class data():
     """
     Contains functions for data cleaning.
@@ -36,14 +34,14 @@ class data():
 
     def parse_data():
         """
-        Description: reads a csv file and converts into dataframe
+        Description: reads a csv file and converts into geodataframe
         Parameters: none
         Returns: DataFrame
         """
-        burned = gpd.read_file("../data/burned/sampleData.csv")
-        unburned = gpd.read_file("../data/unburned/sampleData.csv")
-        temp1 = gpd.GeoDataFrame()
-        temp2 = gpd.GeoDataFrame()
+        burned = pd.read_csv("data/burned/sampleData.csv")
+        unburned = pd.read_csv("data/unburned/sampleData.csv")
+        temp1 = pd.DataFrame()
+        temp2 = pd.DataFrame()
         for i in np.unique(burned['FIRE_NAME']):
             temp1 = pd.concat([temp1,burned[burned['FIRE_NAME']==i]])
             temp2 = pd.concat([temp2,unburned[unburned['FIRE_NAME']==i]])
@@ -56,7 +54,7 @@ class data():
         Parameters: df -> clean_df
         Returns: DataFrame
         """
-        clean_df = df[['burnSeverity','SR_B3','SR_B6','NDVI','elevation','percent_tree_cover','x_coord','y_coord']]
+        clean_df = copy.deepcopy(df[['burnSeverity','SR_B3','SR_B6','NDVI','elevation','percent_tree_cover','x_coord','y_coord']])
         for i in clean_df.columns:
             clean_df[i]=pd.to_numeric(clean_df[i], errors='coerce')
         for i in clean_df.columns:
@@ -69,7 +67,7 @@ class data():
         Parameters: clean_df -> array
         Returns: array
         """
-        X_train = clean_df.drop(['burnSeverity'],axis=1)
+        X_train = copy.deepcopy(clean_df.drop(['burnSeverity'],axis=1))
         scaler = preprocessing.StandardScaler().fit(X_train.values)
         X_scaled = scaler.transform(X_train)
         return X_scaled
