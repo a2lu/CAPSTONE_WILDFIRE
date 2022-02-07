@@ -31,7 +31,7 @@ from sklearn.neighbors import KNeighborsClassifier
 
 class data():
     """
-    class data contains functions for data cleaning and baseline modeling.
+    Contains functions for data cleaning.
     """
 
     def parse_data():
@@ -74,71 +74,3 @@ class data():
         X_scaled = scaler.transform(X_train)
         return X_scaled
 
-    def log_reg(clean_df, X_scaled):
-        """
-        Description: takes in the standardized dataframe and array and fits a Logistic Regression model
-        Parameters: df, array -> model
-        Returns: fitted model
-        """
-        lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
-        x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
-        pipe = LogisticRegression()
-        pipe.fit(x_train, y_train)
-        print("Logistic Regression: "+str(pipe.score(x_test, y_test)))
-        return pipe
-
-    def mlp_class(clean_df, X_scaled):
-        """
-        Description: takes in the standardized dataframe and array and fits a MLP Classifier model
-        Parameters: df, array -> model
-        Returns: fitted model
-        """
-        lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
-        x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
-        clf = MLPClassifier(max_iter=300).fit(x_train, y_train)
-        print("MLP Classifier: "+str(clf.score(x_test, y_test)))
-        return clf
-
-
-    def xtra_class(clean_df, X_scaled):
-        """
-        Description: takes in the standardized dataframe and array and fits a Extra Trees Classifier model
-        Parameters: df, array -> model
-        Returns: fitted model
-        """
-        lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
-        x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
-        clf = ExtraTreesClassifier().fit(x_train, y_train)
-        print("Extra Trees Classifier: "+str(clf.score(x_test, y_test)))
-        return clf
-
-    def kn_class(clean_df, X_scaled):
-        """
-        Description: takes in the standardized dataframe and array and fits a KNeighbors Classifier model
-        Parameters: df, array -> model
-        Returns: fitted model
-        """
-        lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
-        x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
-        clf = KNeighborsClassifier()
-        clf.fit(x_train, y_train)
-        print("Extra Trees Classifier: "+str(clf.score(x_test, y_test)))
-        return clf
-
-    def rf_class(clean_df, X_scaled):
-        """
-        Description: takes in the standardized dataframe and array and fits a Random Forest Classifier model
-        Parameters: df, array -> model
-        Returns: fitted model
-        """
-        lab_enc = preprocessing.LabelEncoder()
-        encoded = lab_enc.fit_transform(clean_df[['burnSeverity']].values)
-        x_train, x_test, y_train, y_test = train_test_split(X_scaled, encoded,test_size=0.2)
-        clf = RandomForestClassifier()
-        clf.fit(x_train, y_train)
-        print("Extra Trees Classifier: "+str(clf.score(x_test, y_test)))
-        return clf

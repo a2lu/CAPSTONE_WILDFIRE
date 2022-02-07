@@ -1,8 +1,6 @@
 import sys
 import json
 import os
-from matplotlib.pyplot import figure
-import matplotlib.pyplot as plt
 
 import geopandas as gpd
 import pandas as pd
@@ -40,6 +38,20 @@ def main(targets):
 
     # Standardize each feature
     X_scaled = data.standardize(clean_df)
+
+    # MLP Classifier model
+    mlp_model = data.mlp_class(clean_df, X_scaled)
+
+    # Extra Trees Classifier model and confusion matrix
+    xtra_model, best_confusion = data.xrta_class(clean_df, X_scaled)
+
+    # KNeighbors Classifier model
+    kn_model = data.kn_class(clean_df, X_scaled)
+
+    # Random Forest Classifier model
+    rf_model = data.rf_class(clean_df, X_scaled)
+
+    print(best_confusion)
 
 if __name__ == "__main__":
     targets = sys.argv[1:]
