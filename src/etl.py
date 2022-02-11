@@ -3,14 +3,20 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 from shapely.geometry import Point, Polygon
+from datetime import datetime, timedelta
 from functools import reduce
 from operator import iconcat, itemgetter
-from funcs import convertDate
 
 
 def boundsBuffer(x, buffer=0.075):
     """
-    Returns a Polygon geometry that represents a bounding box with a default 7.5% buffer
+    Creates a bounding box with a default 7.5% buffer
+
+    Args:
+        x: GeoPandas geometry object
+
+    Returns:
+        Shapely.Polygon that represents buffered bounding box over input geometry
     """
     minx, miny, maxx, maxy = x
     buffer_x, buffer_y = np.abs(buffer*(maxx-minx)), np.abs(buffer*(maxy-miny))
@@ -23,13 +29,30 @@ def boundsBuffer(x, buffer=0.075):
     return Polygon(coords)
 
 
+def convertDate(date):
+    """
+    Converts EE.Date or unix date to Y-M-D formst
+    """
+    if isinstance(date, ee.Date):
+        date = date.getInfo()["value"]
+
+    return datetime.utcfromtimestamp(date/1000).strftime("%Y-%m-%d")# %H:%M:%S')
+
+
 def sizeCode(x):
-    if (10000 <= x < 50000):
+    """
+    Maps NWCG fire size code based on acres burned by a fire
+    """
+    if x < 5000:
+        return "A"
+    elif 5000 <= x < 10000:
+        return "G"
+    elif 10000 <= x < 50000:
         return "H"
-    elif (50000 <= x < 100000):
+    elif 50000 <= x < 100000:
         return "I"
-    elif (100000 <= x < 500000):
-        return "J"
+    elif 100000 <= x:
+        return "J+"
 
 
 
@@ -42,10 +65,10 @@ def genSamplePoints(feature, gridScale, pointScale, seed):
         feature: ee.Feature object that
         gridScale: Determines the size/spacing of grid boxes
         pointScale:
-        seed:
+        seed: random seed
 
     Returns:
-
+        ee.FeatureCollection with sample pixel coordinates
     """
     projection = ee.Projection("EPSG:3310").atScale(gridScale)
     geometry = feature.geometry()
@@ -96,7 +119,6 @@ def formatToGPD(fireNames, pointLst):
     # gdf.to_file(path)
 
 
-
 def mosaicByDate(collection):
     """
     Combines image tiles in a collection into a single image by day
@@ -125,7 +147,7 @@ def pointReducer(image, collection, scale, reducer):
         reducer: ee.Reducer to apply over collection
 
     Returns:
-
+        ee.List with sampled data from image
     """
     reducedPoints = image.reduceRegions(collection=collection,
                                         scale=scale,
