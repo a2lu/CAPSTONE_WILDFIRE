@@ -1,8 +1,10 @@
 import ee
 import geopandas as gpd
+import geemap #
 import pandas as pd
 import numpy as np
 from shapely.geometry import Point, Polygon
+import os #
 from datetime import datetime, timedelta
 from functools import reduce
 from operator import iconcat, itemgetter
@@ -56,7 +58,7 @@ def sizeCode(x):
 
 
 
-def genSamplePoints(feature, gridScale, pointScale, seed):
+def genSamplePoints(collection, fireName, gridScale, pointScale, seed):
     """
     Invokes Earth Engine to create a buffered grid over the input feature geometry and randomly
     samples a point from each grid box
@@ -68,8 +70,9 @@ def genSamplePoints(feature, gridScale, pointScale, seed):
         seed: random seed
 
     Returns:
-        ee.FeatureCollection with sample pixel coordinates
+        ee.List with sample pixel coordinates
     """
+    feature = collection.filter(ee.Filter.eq("FIRE_NAME", fireName))
     projection = ee.Projection("EPSG:3310").atScale(gridScale)
     geometry = feature.geometry()
 
@@ -90,10 +93,21 @@ def genSamplePoints(feature, gridScale, pointScale, seed):
                        ).clip(geometry
                        ).reproject(projection.scale(pointScale, pointScale))
 
-    return points.reduceToVectors(reducer=ee.Reducer.countEvery(),
+    return points.reduceToVectors(reducer=ee.Reducer.countEvery(),   #ee.List
                                   geometry=geometry,
                                   geometryType="centroid",
                                   maxPixels=1e10).geometry().coordinates()
+
+    # points = points.reduceToVectors(reducer=ee.Reducer.countEvery(),
+    #                               geometry=geometry,
+    #                               geometryType="centroid",
+    #                               maxPixels=1e10
+    #               ).geometry(
+    #               ).coordinates(
+    #               ).map(lambda x: ee.Feature(ee.Geometry.Point(x),
+    #                                          {"FIRE_NAME": fireName}))
+    #
+    # return ee.FeatureCollection(points).set("FIRE_NAME", fireName)
 
 
 def formatToGPD(fireNames, pointLst):
@@ -114,9 +128,8 @@ def formatToGPD(fireNames, pointLst):
 
     gdf = gpd.GeoDataFrame(names, geometry=points_gpd).rename(columns={0: "FIRE_NAME"})
     gdf.crs = "EPSG:4326"       # for naive geometries
-    gdf.to_crs("EPSG:3310", inplace=True)
+    # gdf.to_crs("EPSG:3310", inplace=True)
     return gdf
-    # gdf.to_file(path)
 
 
 def mosaicByDate(collection):
@@ -157,7 +170,6 @@ def pointReducer(image, collection, scale, reducer):
     return reducedPoints.toList(reducedPoints.size())
 
 
-##### clean up function #####
 def saveSampleData(data, keys, geometry, path):
     """
 
@@ -166,7 +178,95 @@ def saveSampleData(data, keys, geometry, path):
     data = reduce(iconcat, data, [])
 
     df = pd.DataFrame(list(map(getKeys, data)))
+    intCols = keys[1:12] + keys[-2:]
     df["x_coord"] = list(geometry.x)
     df["y_coord"] = list(geometry.y)
     df.columns = keys + ["x_coord", "y_coord"]
+    df = df.dropna().round(2)
+    df[intCols] = df[intCols].astype(int)
+
     df.to_csv(path, index=False)
+
+
+def prepImage(preFireImage, postFireImage, fireName, geometry, endDate):
+    """
+
+
+    """
+    # Calculate NBR, dNBR, and burn severity
+    preFireNBR = preFireImage.normalizedDifference(['SR_B5', 'SR_B7'])
+    postFireNBR = postFireImage.normalizedDifference(['SR_B5', 'SR_B7'])
+    dNBR = (preFireNBR.subtract(postFireNBR)
+                     ).multiply(1000
+                     ).rename("dNBR")
+
+    burnSeverity = dNBR.expression(" (b('dNBR') > 425) ? 5 "    # purple: high severity
+                                   ":(b('dNBR') > 225) ? 4 "    # orange: moderate severity
+                                   ":(b('dNBR') > 100) ? 3 "    # yellow: low severity
+                                   ":(b('dNBR') > -60) ? 2 "    # green: unburned/unchanged
+                                   ":(b('dNBR') <= -60) ? 1 "   # brown: vegetation growth
+                                   ":0"                         # pseudo mask
+                      ).rename("burnSeverity")
+
+    # Get SRTM elevation, NLCD land coverpostFireImageNDVI, and GRIDMET weather
+    dem = ee.Image("NASA/NASADEM_HGT/001").select("elevation")
+    nlcd = ee.ImageCollection('USGS/NLCD_RELEASES/2016_REL'
+            ).filter(ee.Filter.eq('system:index', '2016')).first()
+
+    lc = nlcd.select("landcover"
+            ).expression(" (b('landcover') > 90) ? 1 "    # blue: other (wetland)
+                         ":(b('landcover') > 80) ? 6 "    # brown: agriculture
+                         ":(b('landcover') > 70) ? 5 "    # lightGreen: grassland/herbaceous
+                         ":(b('landcover') > 50) ? 4 "    # yellow: shrub
+                         ":(b('landcover') > 40) ? 3 "    # green: forest
+                         ":(b('landcover') > 30) ? 1 "    # blue: other (barren land)
+                         ":(b('landcover') > 20) ? 2 "    # red: developed/urban
+                         ":(b('landcover') > 10) ? 1 "    # blue: other (water/perennial ice+snow)
+                         ":0"                             # handle for potential exceptions
+            ).rename("landCover")
+
+    ndvi = postFireImage.normalizedDifference(["SR_B5", "SR_B4"]
+                       ).rename("NDVI"
+                       ).multiply(1000)
+
+    gridmet = ee.ImageCollection("IDAHO_EPSCOR/GRIDMET"
+               ).filterBounds(geometry
+               ).filterDate(ee.Date(endDate).advance(-3, "day"), endDate
+               ).mean()
+
+    # Merge all image bands together
+    combined = postFireImage.select('SR_B.'                 # post-fire L8 bands 1-7
+                           ).addBands(burnSeverity          # classified burn severity
+                           ).addBands(dNBR                  # dNBR
+                           ).addBands(ndvi                  # post-fire NDVI
+                           ).addBands(dem                   # SRTM elevation
+                           ).addBands(gridmet               # all GRIDMET bands
+                           ).addBands(nlcd.select("percent_tree_cover")
+                           ).addBands(lc                    # simplfied landcover
+                           ).set("FIRE_NAME", fireName)
+    return combined
+
+
+def loadTif(numTries, imgScale, fireName, image, geometry, path="tifs"):
+    """
+    Downloads an ee.Image as a raster at varying spatial resolutions if download
+    """
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+    for i in range(numTries):
+        try:
+            geemap.ee_export_image(ee_object=image,
+                                   filename=os.path.join(path, "{}.tif".format(fireName)),
+                                   scale=imgScale[i],
+                                   region=geometry)
+            # os.path.join(path, "{}.tif".format(fireID))
+            # geemap.ee_export_image(image, "tifs/{}.tif".format(fireID), scale=imgScale[i], region=geometry)
+            print("Downloaded {} at {}m scale".format(fireName, imgScale[i]))
+            break
+        except Exception:
+            if i == numTries-1:
+                print("Fire exceeds total request size")
+            # else:
+                # print("Retrying at {}m scale".format(imgScale[i+1]))
+    print("\n")

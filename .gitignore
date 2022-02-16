@@ -9,6 +9,8 @@ __pycache__
 
 images
 viz
+tifs
+data/rasters
 data/California_Fire_Perimeters_(all).geojson
 
 geckodriver.log
